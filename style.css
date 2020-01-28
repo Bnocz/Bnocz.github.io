@@ -1,0 +1,50 @@
+.grid-container {
+    display: grid;
+    width: 50%;
+    margin: auto;
+}
+
+.grid-item {
+    width: 100%;
+    height: 100%;
+    border: 1px solid grey;
+    text-align: center;
+    display: grid;
+    grid-template-columns: 1fr 5fr;
+}
+
+.grid-item:hover {
+    background-color: grey
+}
+
+.grid-item > img {
+    margin: auto;
+}
+
+.title-box {
+    margin: auto;
+    width: 80%;
+    border: 1px solid grey;
+    text-align: center;
+    padding: 10px
+}
+
+.title-box > input {
+    width: 80%;
+}
+
+.title-box > h1 {
+    padding-left: 10%;
+    text-align: left
+}
+
+.text-item {
+    margin: left;
+    padding-left: 10px;
+    text-align: left;
+}
+
+.text-item > p {
+    margin: left;
+    font-size: small;
+}

@@ -1,14 +1,336 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import Divider from '../components/Divider.astro';
+import { getCollection } from 'astro:content';
+import ProjectCard from '../components/ProjectCard.astro';
+
+const projects = (await getCollection('projects')).sort(
+  (a, b) => a.data.order - b.data.order
+);
+const jobs = [
+  {
+    role: 'Software Developer',
+    company: 'Conexiom',
+    dates: '[July 2022] – [November 2023]',
+    bullets: [
+	'Built and maintained monitoring and alerting for production systems, reducing on-call overhead by 30%.',
+	'Built and maintained two-way integrations with customer ERP and CRM systems (SAP, Salesforce, Microsoft Dynamics) through REST APIs on Azure: pulling incoming orders into Conexiom, pushing processed data back, and keeping records in sync.',
+	'Developed full-stack features in C#/.NET and React, from design through deployment and production support.',
+	'Wrote unit and integration tests and maintained GitHub Actions CI/CD pipelines, catching regressions before release.',
+    ],
+  },
+  {
+    role: 'Technical Support Specialist',
+    company: 'Novus Entertainment',
+    dates: '[May 2019] – [August 2019]',
+    bullets: [
+	'Diagnosed and resolved complex, protocol-level network escalations for customers, building deep hands-on troubleshooting expertise under time pressure.',
+	'Communicated technical issues clearly to non-technical customers, prioritizing and supporting high-impact cases to minimize service disruption',],
+  },
+];
 ---
 
 <BaseLayout title="Bertram Nocon | Software Developer">
   <section id="hero">
-    <h1>Bertram Nocon</h1>
-    <p class="tagline"><!-- the one-liner from the doc --></p>
-    <p class="subtitle"><!-- optional tavern line --></p>
-    <ul class="links">
-      <!-- GitHub, LinkedIn, Resume, Email -->
-    </ul>
+    <div class="embers" aria-hidden="true">
+      {Array.from({ length: 12 }, (_, i) => <span style={`--i: ${i}`}></span>)}
+    </div>
+
+    <div class="hero-content">
+      <h1>Bertram Nocon</h1>
+      <div class="divider" aria-hidden="true"><span>◆</span></div>
+      <p class="tagline">Software developer building backend systems and integrations in C#/.NET and Azure.</p>
+      <p class="subtitle">Backend integrations by day, tools for my tabletop games by night.</p>
+      <ul class="links">
+        <li><a class="primary" href="/resume.pdf" target="_blank" rel="noopener">Resume</a></li>
+        <li><a href="https://github.com/Bnocz">GitHub</a></li>
+        <li><a href="https://linkedin.com/in/berby">LinkedIn</a></li>
+        <li><a href="mailto:BertNocon2@gmail.com">Email</a></li>
+      </ul>
+    </div>
   </section>
+  <section id="experience">
+  <h2>Experience</h2>
+  <Divider />
+
+  <div class="jobs">
+    {jobs.map((job) => (
+      <article class="job">
+        <header class="job-header">
+          <div>
+            <h3>{job.role}</h3>
+            <p class="company">{job.company}</p>
+          </div>
+          <p class="dates">{job.dates}</p>
+        </header>
+
+        {job.bullets.length > 0 && (
+          <ul>
+            {job.bullets.map((bullet) => (
+              <li>{bullet}</li>
+            ))}
+          </ul>
+        )}
+      </article>
+    ))}
+  </div>
+</section>
+<section id="projects">
+  <h2>Projects</h2>
+  <Divider />
+  <div class="board">
+    {projects.map((project) => <ProjectCard project={project} />)}
+  </div>
+</section>
 </BaseLayout>
+<style>
+  /* ---- Layout + firelight ---- */
+  #hero {
+    position: relative;
+    max-width: none;           /* full width, so the glow isn't boxed in */
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  #hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(ellipse 55% 45% at 50% 65%, rgb(224 160 67 / 0.18), transparent 70%),
+      radial-gradient(ellipse at center, transparent 45%, rgb(0 0 0 / 0.55) 100%);
+  }
+
+  /* ---- Name with candle flicker ---- */
+  h1 {
+    margin: 0;
+    font-size: clamp(2.5rem, 7vw, 4.75rem);
+    color: var(--parchment);
+  }
+
+  @keyframes flicker {
+    0%, 100% { text-shadow: 0 0 18px rgb(224 160 67 / 0.35), 0 0 42px rgb(224 160 67 / 0.15); }
+    45%      { text-shadow: 0 0 22px rgb(224 160 67 / 0.45), 0 0 56px rgb(224 160 67 / 0.2); }
+    50%      { text-shadow: 0 0 14px rgb(224 160 67 / 0.28), 0 0 36px rgb(224 160 67 / 0.12); }
+    70%      { text-shadow: 0 0 20px rgb(224 160 67 / 0.4),  0 0 48px rgb(224 160 67 / 0.18); }
+  }
+
+  /* ---- Ornamental divider ---- */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: min(18rem, 70%);
+    margin: 1.25rem auto;
+    color: var(--accent);
+    font-size: 0.7rem;
+  }
+  .divider::before,
+  .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+  }
+  .divider::before { background: linear-gradient(90deg, transparent, var(--accent)); }
+  .divider::after  { background: linear-gradient(90deg, var(--accent), transparent); }
+
+  /* ---- Text ---- */
+  .tagline {
+    max-width: 36rem;
+    margin: 0 auto;
+    font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+  }
+  .subtitle {
+    margin: 0.5rem 0 0;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* ---- Link buttons ---- */
+  .links {
+    list-style: none;
+    padding: 0;
+    margin: 2rem 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+  .links a {
+    display: inline-block;
+    padding: 0.6rem 1.2rem;
+    border: 1px solid rgb(224 160 67 / 0.5);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+  }
+  .links a:hover {
+    text-decoration: none;
+    background: rgb(224 160 67 / 0.12);
+    box-shadow: 0 0 16px rgb(224 160 67 / 0.35);
+    transform: translateY(-2px);
+  }
+  .links a.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--ink);
+  }
+  .links a.primary:hover {
+    background: #eab15a;
+  }
+
+  /* ---- Rising embers ---- */
+  .embers {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .embers span {
+    position: absolute;
+    bottom: -10px;
+    left: calc(4% + var(--i) * 8%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px 2px rgb(224 160 67 / 0.6);
+    opacity: 0;
+    animation: rise calc(7s + var(--i) * 0.4s) linear infinite;
+    animation-delay: calc(var(--i) * -1.3s);
+  }
+  .embers span:nth-child(even) {
+    width: 3px;
+    height: 3px;
+    animation-name: rise-left;
+  }
+
+  @keyframes rise {
+    0%   { transform: translate(0, 0); opacity: 0; }
+    10%  { opacity: 0.9; }
+    100% { transform: translate(30px, -85vh); opacity: 0; }
+  }
+  @keyframes rise-left {
+    0%   { transform: translate(0, 0); opacity: 0; }
+    10%  { opacity: 0.7; }
+    100% { transform: translate(-40px, -75vh); opacity: 0; }
+  }
+
+  /* ---- Staggered fade-in on load ---- */
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hero-content > * { animation: fade-up 0.8s ease-out both; }
+  .hero-content > :nth-child(2) { animation-delay: 0.15s; }
+  .hero-content > :nth-child(3) { animation-delay: 0.3s; }
+  .hero-content > :nth-child(4) { animation-delay: 0.45s; }
+  .hero-content > :nth-child(5) { animation-delay: 0.6s; }
+  .hero-content h1 {
+    animation: fade-up 0.8s ease-out both, flicker 4s ease-in-out 0.8s infinite;
+  }
+
+  /* ---- Respect reduced-motion settings ---- */
+  @media (prefers-reduced-motion: reduce) {
+    .embers { display: none; }
+    .hero-content > *,
+    .hero-content h1 { animation: none; }
+  }
+  /* ---- Experience ---- */
+#experience h2 {
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.jobs {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.job {
+  background: var(--surface);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 1.5rem 1.75rem;
+  transition: box-shadow 0.25s;
+}
+.job:hover {
+  box-shadow: 0 0 20px rgb(224 160 67 / 0.15);
+}
+
+.job-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.job h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.company,
+.dates {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+}
+
+.dates {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.job ul {
+  margin: 1rem 0 0;
+  padding-left: 1.2rem;
+}
+.job li {
+  margin-bottom: 0.5rem;
+}
+.job li::marker {
+  color: var(--accent);
+}
+/* ---- Projects: quest board ---- */
+#projects h2 {
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  gap: 2.5rem 2rem;
+  margin-top: 2rem;
+  padding: 2.5rem 2rem;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgb(0 0 0 / 0.12) 0 2px,
+      transparent 2px 120px
+    ),
+    #3a2818;
+  border: 6px solid #22170e;
+  border-radius: 6px;
+  box-shadow: inset 0 0 30px rgb(0 0 0 / 0.6);
+}
+@media (max-width: 480px) {
+  .board {
+    padding: 2rem 1rem;
+    border-width: 4px;
+  }
+}
+</style>

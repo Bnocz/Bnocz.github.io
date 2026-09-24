@@ -1,0 +1,153 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Divider from '../../components/Divider.astro';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map((project) => ({
+    params: { id: project.id },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+const { title, hook, stack, team, repo } = project.data;
+const { Content } = await render(project);
+---
+
+<BaseLayout title={`${title} | Bertram Nocon`} description={hook}>
+  <section class="project">
+    <a class="back" href="/#projects">← Back to the board</a>
+
+<header transition:name={`project-${project.id}`}>
+  <h1 transition:name={`title-${project.id}`}>{title}</h1>
+      {team && <p class="team">{team}</p>}
+      <Divider />
+      <p class="hook">{hook}</p>
+      <ul class="stack">
+        {stack.map((tech) => <li>{tech}</li>)}
+      </ul>
+      {repo && (
+        <a class="repo" href={repo} target="_blank" rel="noopener">View repo →</a>
+      )}
+    </header>
+
+    <article class="prose">
+      <Content />
+    </article>
+  </section>
+</BaseLayout>
+
+<style>
+  .project {
+    max-width: 46rem;
+  }
+
+  .back {
+    display: inline-block;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+
+header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 3rem;
+  padding: 2.5rem 2rem 2rem;
+  background: var(--parchment);
+  color: var(--ink);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 0 50px rgb(120 80 30 / 0.25),
+    0 10px 24px rgb(0 0 0 / 0.45);
+}
+
+/* same brass pin as the card */
+header::before {
+  content: '';
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f3d18a, #a8741f 60%, #5a3c10);
+  box-shadow: 0 2px 3px rgb(0 0 0 / 0.5);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.25rem);
+  color: var(--ink);
+}
+
+header .team  { color: #6b5236; }
+header .stack li {
+  color: var(--ink);
+  border-color: rgb(43 29 18 / 0.35);
+}
+header .repo  { color: var(--wine); }
+
+  .team {
+    margin: 0.3rem 0 0;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .hook {
+    font-size: 1.15rem;
+    max-width: 36rem;
+    margin: 0 auto 1.25rem;
+  }
+
+  .stack {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .stack li {
+    padding: 0.2rem 0.7rem;
+    font-size: 0.8rem;
+    border: 1px solid rgb(224 160 67 / 0.45);
+    border-radius: 999px;
+    color: var(--muted);
+  }
+
+  .repo {
+    font-weight: 600;
+  }
+
+  /* ---- Rendered Markdown ---- */
+  .prose :global(h2) {
+    margin: 2.5rem 0 0.75rem;
+    font-size: 1.4rem;
+    color: var(--accent);
+  }
+  .prose :global(p) {
+    margin: 0 0 1rem;
+  }
+  .prose :global(ul) {
+    padding-left: 1.2rem;
+  }
+  .prose :global(li) {
+    margin-bottom: 0.5rem;
+  }
+  .prose :global(li::marker) {
+    color: var(--accent);
+  }
+  .prose :global(strong) {
+    color: var(--parchment);
+  }
+  .prose :global(code) {
+    padding: 0.1rem 0.35rem;
+    background: var(--surface);
+    border-radius: 3px;
+    font-size: 0.9em;
+  }
+</style>

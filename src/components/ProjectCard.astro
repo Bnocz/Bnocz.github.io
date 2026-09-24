@@ -1,0 +1,123 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+
+const { project } = Astro.props;
+const { title, hook, stack, team, repo } = project.data;
+---
+
+<article class="card" transition:name={`project-${project.id}`}>
+  <h3 transition:name={`title-${project.id}`}>
+    <a class="card-link" href={`/projects/${project.id}`}>{title}</a>
+  </h3>
+  {team && <p class="team">{team}</p>}
+  <p class="hook">{hook}</p>
+
+  <ul class="stack">
+    {stack.map((tech) => <li>{tech}</li>)}
+  </ul>
+
+  {repo && (
+    <a class="repo" href={repo} target="_blank" rel="noopener">View repo →</a>
+  )}
+</article>
+
+<style>
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 1.5rem 1.5rem;
+    background: var(--parchment);
+    color: var(--ink);
+    border-radius: 2px;
+    box-shadow:
+      inset 0 0 40px rgb(120 80 30 / 0.25),   /* aged edges */
+      0 8px 18px rgb(0 0 0 / 0.45);            /* lift off the board */
+    rotate: -1.2deg;
+    transition: rotate 0.25s, transform 0.25s, box-shadow 0.25s;
+  }
+  .card:nth-child(2) { rotate: 1deg; }
+  .card:nth-child(3) { rotate: -0.6deg; }
+
+  .card:hover {
+    rotate: 0deg;
+    transform: translateY(-6px);
+    box-shadow:
+      inset 0 0 40px rgb(120 80 30 / 0.25),
+      0 14px 28px rgb(0 0 0 / 0.5),
+      0 0 24px rgb(224 160 67 / 0.25);
+  }
+
+  /* brass pin */
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0.6rem;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    translate: -50% 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f3d18a, #a8741f 60%, #5a3c10);
+    box-shadow: 0 2px 3px rgb(0 0 0 / 0.5);
+  }
+
+  h3 {
+    margin: 0.5rem 0 0;
+    font-size: 1.35rem;
+  }
+
+  /* makes the whole card clickable */
+  .card-link {
+    color: var(--ink);
+  }
+  .card-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .team {
+    margin: 0.2rem 0 0;
+    font-size: 0.85rem;
+    color: #6b5236;
+    font-style: italic;
+  }
+
+  .hook {
+    margin: 0.9rem 0 1.1rem;
+    flex: 1;
+  }
+
+  .stack {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .stack li {
+    padding: 0.15rem 0.55rem;
+    font-size: 0.75rem;
+    border: 1px solid rgb(43 29 18 / 0.35);
+    border-radius: 999px;
+  }
+
+  .repo {
+    position: relative;   /* sits above the card-wide link */
+    z-index: 1;
+    align-self: flex-start;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--wine);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .card:hover { rotate: 0deg; transform: none; transition: none; }
+  }
+</style>

@@ -1,0 +1,36 @@
+---
+// The Canucks page: a standalone document (it keeps its own scoreboard look instead of the
+// site layout). Data is fetched from the NHL API when the site builds; the deploy workflow
+// rebuilds every 30 minutes so the numbers stay fresh.
+import template from '../canucks/page.html?raw';
+import { fetchCanucksData } from '../canucks/data';
+
+const data = await fetchCanucksData();
+
+// JSON inside a <script> tag: escape "<" so the data can never close the tag early.
+const json = JSON.stringify(data).replace(/</g, '\\u003c');
+const filled = template.replace('__CANUCKS_DATA__', () => json);
+
+// The template starts with its <title>, <meta>, <link> and <style> tags (head), then the data
+// script and the page content (body).
+const split = filled.indexOf('<script type="application/json" id="data">');
+if (split === -1) throw new Error('Canucks template is missing its data block');
+const head = filled.slice(0, split);
+const body = filled.slice(split);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="How many games in a row the Vancouver Canucks have lost, who's scoring anyway, and the race to the first overall pick."
+    />
+    <style is:inline>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+    <Fragment set:html={head} />
+  </head>
+  <body>
+    <Fragment set:html={body} />
+  </body>
+</html>

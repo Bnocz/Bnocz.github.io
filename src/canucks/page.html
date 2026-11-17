@@ -1,0 +1,659 @@
+<!-- Canucks page template. src/pages/canucks.astro fills the data block with live NHL data at build time. -->
+<title>Canucks Losing Streak</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: one narrow column. An arena scoreboard holds the streak, a season strip of W/L chips under it, then the "bright side" list. */
+:root {
+  --bg: #eef3f7;          /* rink ice */
+  --surface: #ffffff;
+  --fg: #0d1b2a;
+  --muted: #55677a;
+  --line: #d4dde6;
+  --accent: #0b6e4f;      /* bench green */
+  --board: #0a1622;       /* scoreboard housing, dark in both themes on purpose */
+  --board-edge: #1d3247;
+  --led: #ffb020;         /* amber scoreboard digits */
+  --led-dim: #3a2a0c;
+  --win: #0b6e4f;
+  --loss: #b3261e;
+  --otl: #b26a00;
+  --chip-fg: #ffffff;
+  --font-display: "Big Shoulders Display", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #08121b; --surface: #0f1d2a; --fg: #e6eef5; --muted: #93a6b8; --line: #20354a;
+    --accent: #3ccf97; --board: #04090f; --board-edge: #1a2c3e; --led: #ffb020; --led-dim: #2a1e08;
+    --win: #1f9d6f; --loss: #d6453b; --otl: #d08a1c; --chip-fg: #ffffff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #08121b; --surface: #0f1d2a; --fg: #e6eef5; --muted: #93a6b8; --line: #20354a;
+  --accent: #3ccf97; --board: #04090f; --board-edge: #1a2c3e; --led: #ffb020; --led-dim: #2a1e08;
+  --win: #1f9d6f; --loss: #d6453b; --otl: #d08a1c; --chip-fg: #ffffff;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 1rem/1.55 var(--font-body);
+}
+.page {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding-block: 2.5rem 3rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 2rem;
+}
+
+/* Scoreboard */
+.board {
+  background: var(--board);
+  border: 3px solid var(--board-edge);
+  border-radius: 14px;
+  padding: 1.25rem 1.25rem 1.5rem;
+  color: #e9f1f8;
+  display: grid;
+  gap: 0.75rem;
+  justify-items: center;
+  text-align: center;
+  box-shadow: 0 18px 40px -24px rgba(4, 12, 20, 0.7);
+}
+.board-label {
+  font: 700 0.72rem/1 var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #8fa6bb;
+}
+.digits {
+  display: flex;
+  gap: 0.4rem;
+}
+.digit {
+  font: 900 clamp(5.5rem, 26vw, 9rem)/0.9 var(--font-display);
+  color: var(--led);
+  background: #000;
+  border: 1px solid var(--board-edge);
+  border-radius: 8px;
+  min-width: 0.9em;
+  padding: 0.08em 0.12em 0.02em;
+  text-shadow: 0 0 18px rgba(255, 176, 32, 0.55);
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+.digit::after { /* faint unlit segment ghost */
+  content: "8";
+  position: absolute;
+  inset: 0.08em 0.12em 0.02em;
+  color: var(--led-dim);
+  text-shadow: none;
+  z-index: 0;
+}
+.digit span { position: relative; z-index: 1; }
+.board-sub {
+  font: 600 0.8rem/1.3 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #c7d5e2;
+}
+
+/* Headline */
+.headline {
+  display: grid;
+  gap: 0.6rem;
+}
+h1 {
+  margin: 0;
+  font: 800 clamp(2rem, 7vw, 2.75rem)/1.05 var(--font-display);
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+h1 .n { color: var(--loss); }
+h1 .n.zero { color: var(--accent); }
+.context {
+  margin: 0;
+  color: var(--muted);
+  max-width: 34rem;
+}
+
+/* Season strip */
+.season {
+  display: grid;
+  gap: 0.75rem;
+}
+.section-label {
+  margin: 0;
+  font: 700 0.75rem/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.season-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+.record {
+  font: 700 0.95rem/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.strip {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.1rem, 1fr));
+  gap: 0.3rem;
+}
+.chip {
+  aspect-ratio: 1;
+  max-width: 100%;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font: 700 0.72rem/1 var(--font-mono);
+  color: var(--chip-fg);
+  cursor: default;
+}
+.chip.W { background: var(--win); }
+.chip.L { background: var(--loss); }
+.chip.OTL { background: var(--otl); }
+.chip.current { outline: 2px solid var(--fg); outline-offset: 2px; }
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.legend li { display: flex; align-items: center; gap: 0.4rem; }
+.swatch { width: 0.8rem; height: 0.8rem; border-radius: 3px; display: inline-block; }
+
+/* Bright side */
+.bright {
+  display: grid;
+  gap: 0.9rem;
+}
+.bright h2 {
+  margin: 0;
+  font: 800 1.6rem/1.1 var(--font-display);
+  letter-spacing: 0.01em;
+}
+.leaders {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.leaders li {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: grid;
+  grid-template-columns: 2.6rem 1fr;
+  gap: 0.75rem;
+  align-items: center;
+}
+.jersey {
+  font: 800 1.35rem/1 var(--font-display);
+  color: var(--accent);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.leaders p { margin: 0; min-width: 0; }
+.leaders strong { font-weight: 600; }
+.leaders .num { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* Countdown to the next game */
+.countdown {
+  display: grid;
+  gap: 0.75rem;
+}
+.countdown h2 {
+  margin: 0;
+  font: 800 1.6rem/1.1 var(--font-display);
+  letter-spacing: 0.01em;
+}
+.clock {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  background: var(--board);
+  border: 3px solid var(--board-edge);
+  border-radius: 12px;
+  padding: 0.8rem;
+}
+.clock-unit {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  background: #000;
+  border: 1px solid var(--board-edge);
+  border-radius: 8px;
+  padding: 0.55rem 0.25rem 0.5rem;
+}
+.clock-value {
+  font: 900 clamp(2rem, 9vw, 3rem)/0.9 var(--font-display);
+  color: var(--led);
+  text-shadow: 0 0 14px rgba(255, 176, 32, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+.clock-label {
+  font: 700 0.62rem/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8fa6bb;
+}
+.clock-status {
+  grid-column: 1 / -1;
+  text-align: center;
+  font: 800 clamp(1.4rem, 6vw, 2rem)/1.1 var(--font-display);
+  color: var(--led);
+  padding: 0.6rem 0;
+}
+.matchup {
+  margin: 0;
+  color: var(--muted);
+}
+.matchup strong { color: var(--fg); font-weight: 600; }
+
+/* Race to first overall pick */
+.draft {
+  display: grid;
+  gap: 0.9rem;
+}
+.draft h2 {
+  margin: 0;
+  font: 800 1.6rem/1.1 var(--font-display);
+  letter-spacing: 0.01em;
+}
+.draft-intro {
+  margin: 0;
+  color: var(--muted);
+  max-width: 34rem;
+}
+.table-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.draft table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.draft th,
+.draft td {
+  padding: 0.5rem 0.7rem;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+.draft th {
+  font: 700 0.68rem/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.draft th.team,
+.draft td.team { text-align: left; }
+.draft td.pick {
+  font: 800 1.05rem/1 var(--font-display);
+  color: var(--muted);
+}
+.draft tbody tr:last-child td { border-bottom: 0; }
+.draft tr.first td.pick { color: var(--led); }
+.draft tr.first { background: color-mix(in srgb, var(--led) 10%, transparent); }
+.draft tr.us { background: color-mix(in srgb, var(--loss) 12%, transparent); }
+.draft tr.us td.team { font-weight: 600; }
+.draft .abbr {
+  font: 700 0.75rem/1 var(--font-mono);
+  color: var(--muted);
+  margin-right: 0.45rem;
+}
+.draft td.pts { font-weight: 600; }
+.playoff-group summary {
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--accent);
+  font-weight: 600;
+  padding-block: 0.25rem;
+}
+.playoff-group summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.playoff-group[open] summary { margin-bottom: 0.6rem; }
+
+footer {
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  display: grid;
+  gap: 0.35rem;
+}
+footer p { margin: 0; }
+footer a { color: var(--accent); }
+footer a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .digit span { animation: flicker 1.6s ease-out 1; }
+  @keyframes flicker {
+    0%, 8% { opacity: 0.25; } 10% { opacity: 1; } 14% { opacity: 0.4; } 18%, 100% { opacity: 1; }
+  }
+}
+</style>
+
+<script type="application/json" id="data">__CANUCKS_DATA__</script>
+
+<main class="page">
+  <section class="board" aria-label="Current losing streak">
+    <div class="board-label">Consecutive losses</div>
+    <div class="digits" id="digits"></div>
+    <div class="board-sub" id="board-sub"></div>
+  </section>
+
+  <section class="headline">
+    <h1 id="headline"></h1>
+    <p class="context" id="context"></p>
+  </section>
+
+  <section class="countdown" id="countdown" aria-labelledby="countdown-title">
+    <h2 id="countdown-title">The streak (probably) continues in:</h2>
+    <div class="clock" id="clock" role="timer" aria-live="off"></div>
+    <p class="matchup" id="matchup"></p>
+  </section>
+
+  <section class="season" aria-labelledby="season-label">
+    <div class="season-head">
+      <p class="section-label" id="season-label">2026-27 regular season, game by game</p>
+      <span class="record" id="record"></span>
+    </div>
+    <ol class="strip" id="strip"></ol>
+    <ul class="legend">
+      <li><span class="swatch" style="background: var(--win)"></span>Win</li>
+      <li><span class="swatch" style="background: var(--loss)"></span>Loss</li>
+      <li><span class="swatch" style="background: var(--otl)"></span>Overtime loss</li>
+    </ul>
+  </section>
+
+  <section class="bright" aria-labelledby="bright-title">
+    <h2 id="bright-title">But on the bright side:</h2>
+    <ol class="leaders" id="leaders"></ol>
+  </section>
+
+  <section class="draft" aria-labelledby="draft-title">
+    <h2 id="draft-title">Race to first overall pick</h2>
+    <p class="draft-intro" id="draft-intro"></p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Pick</th><th class="team">Team</th><th>GP</th><th>W-L-OTL</th><th>PTS</th><th>P%</th></tr>
+        </thead>
+        <tbody id="draft-lottery"></tbody>
+      </table>
+    </div>
+    <details class="playoff-group">
+      <summary id="playoff-summary">Picks 17-32: teams in playoff position</summary>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Pick</th><th class="team">Team</th><th>GP</th><th>W-L-OTL</th><th>PTS</th><th>P%</th></tr>
+          </thead>
+          <tbody id="draft-playoff"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <p><a href="/">← Back to bnocz.github.io</a></p>
+    <p id="asof"></p>
+    <p>Draft order follows the current standings in reverse: teams outside a playoff spot pick first, worst record first. The draft lottery decides the real top picks, so last place has the best odds at first overall, not a guarantee.</p>
+    <p>Overtime and shootout losses count as losses. Data from the NHL's public stats API, pulled with <a href="https://github.com/Bnocz/nhl-stats-mcp">nhl-stats-mcp</a>.</p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  const data = JSON.parse(document.getElementById("data").textContent);
+  const results = data.results;
+  const isLoss = (r) => r.result !== "W";
+
+  // Current streak: count losses back from the most recent game.
+  let current = 0;
+  for (let i = results.length - 1; i >= 0 && isLoss(results[i]); i--) current++;
+
+  // Longest losing streak this season, and the streak that the latest win snapped.
+  let longest = 0, run = 0;
+  for (const r of results) { run = isLoss(r) ? run + 1 : 0; longest = Math.max(longest, run); }
+  let snapped = 0;
+  if (current === 0) {
+    for (let i = results.length - 2; i >= 0 && isLoss(results[i]); i--) snapped++;
+  }
+
+  const fmtDate = (iso) =>
+    new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  const games = (n) => `${n} ${n === 1 ? "game" : "games"}`;
+  const last = results[results.length - 1];
+
+  // Scoreboard digits
+  const digits = document.getElementById("digits");
+  String(current).padStart(2, "0").split("").forEach((d) => {
+    const el = document.createElement("div");
+    el.className = "digit";
+    const span = document.createElement("span");
+    span.textContent = d;
+    el.appendChild(span);
+    digits.appendChild(el);
+  });
+  document.getElementById("board-sub").textContent =
+    `Season long: ${longest}` + (data.nextGame ? `  ·  Next: ${data.nextGame.home ? "vs" : "@"} ${data.nextGame.opp}` : "");
+
+  // Headline
+  const h1 = document.getElementById("headline");
+  h1.innerHTML = "";
+  h1.append(`The ${data.team} have lost `);
+  const n = document.createElement("span");
+  n.className = "n" + (current === 0 ? " zero" : "");
+  n.textContent = games(current);
+  h1.append(n, " in a row");
+
+  const where = (r) => (r.home ? "vs" : "at");
+  const context = document.getElementById("context");
+  if (current === 0) {
+    context.textContent =
+      `They beat ${last.opp} ${last.us}-${last.them} on ${fmtDate(last.date)}` +
+      (snapped ? `, which ended a ${snapped}-game losing streak.` : ".") +
+      (data.nextGame ? ` Next up: ${data.nextGame.home ? "home to" : "at"} ${data.nextGame.opp}, ${fmtDate(data.nextGame.date)}, ${data.nextGame.time}.` : "");
+  } else {
+    const lastWin = [...results].reverse().find((r) => r.result === "W");
+    context.textContent =
+      `Most recently ${last.us}-${last.them} ${where(last)} ${last.opp} on ${fmtDate(last.date)}.` +
+      (lastWin ? ` Last win: ${fmtDate(lastWin.date)} ${where(lastWin)} ${lastWin.opp}.` : " No wins yet this season.");
+  }
+
+  // Season record and strip
+  const w = results.filter((r) => r.result === "W").length;
+  const l = results.filter((r) => r.result === "L").length;
+  const otl = results.filter((r) => r.result === "OTL").length;
+  document.getElementById("record").textContent = `${w}-${l}-${otl}`;
+
+  const strip = document.getElementById("strip");
+  results.forEach((r, i) => {
+    const li = document.createElement("li");
+    const inCurrent = current > 0 && i >= results.length - current;
+    li.className = `chip ${r.result}` + (inCurrent ? " current" : "");
+    li.textContent = r.result === "OTL" ? "OT" : r.result;
+    const label = `${fmtDate(r.date)} ${where(r)} ${r.opp}: ${r.result === "W" ? "won" : "lost"} ${r.us}-${r.them}${r.ot ? " (" + r.ot + ")" : ""}`;
+    li.title = label;
+    li.setAttribute("aria-label", label);
+    strip.appendChild(li);
+  });
+
+  // Leaders, in the requested sentence format
+  const leaders = document.getElementById("leaders");
+  data.leaders.forEach((p) => {
+    const li = document.createElement("li");
+    const num = document.createElement("span");
+    num.className = "jersey";
+    num.textContent = `#${p.number}`;
+    const para = document.createElement("p");
+    const name = document.createElement("strong");
+    name.textContent = p.name;
+    const pts = (v, word) => {
+      const s = document.createElement("span");
+      s.className = "num";
+      s.textContent = v;
+      return [s, ` ${word}${v === 1 ? "" : "s"}`];
+    };
+    para.append(name, " has ", ...pts(p.points, "point"), " with ", ...pts(p.goals, "goal"), " and ", ...pts(p.assists, "assist"), ".");
+    li.append(num, para);
+    leaders.appendChild(li);
+  });
+
+  // Countdown to the next game
+  const ng = data.nextGame;
+  const countdown = document.getElementById("countdown");
+  if (!ng || !ng.startUTC) {
+    countdown.hidden = true;
+  } else {
+    const start = new Date(ng.startUTC);
+    const clock = document.getElementById("clock");
+    const units = [["days", 86400], ["hours", 3600], ["minutes", 60], ["seconds", 1]];
+    const values = {};
+    for (const [label] of units) {
+      const box = document.createElement("div");
+      box.className = "clock-unit";
+      const v = document.createElement("span");
+      v.className = "clock-value";
+      const l = document.createElement("span");
+      l.className = "clock-label";
+      l.textContent = label;
+      box.append(v, l);
+      clock.appendChild(box);
+      values[label] = v;
+    }
+    const status = document.createElement("div");
+    status.className = "clock-status";
+    status.hidden = true;
+    clock.appendChild(status);
+
+    const local = start.toLocaleString(undefined, {
+      weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
+    });
+    const matchup = document.getElementById("matchup");
+    matchup.textContent = "";
+    const strong = document.createElement("strong");
+    strong.textContent = `${data.team} ${ng.home ? "vs" : "at"} ${ng.opp}`;
+    matchup.append(strong, `, ${local}`);
+
+    const THREE_HOURS = 3 * 3600 * 1000;
+    let timer = null;
+    const tick = () => {
+      const ms = start.getTime() - Date.now();
+      if (ms <= 0) {
+        clock.querySelectorAll(".clock-unit").forEach((u) => (u.hidden = true));
+        status.hidden = false;
+        status.textContent = ms > -THREE_HOURS
+          ? "Puck has dropped. Game on."
+          : "Game over. The result shows up with the next data update.";
+        if (timer) clearInterval(timer);
+        return;
+      }
+      let rest = Math.floor(ms / 1000);
+      for (const [label, size] of units) {
+        const n = Math.floor(rest / size);
+        rest -= n * size;
+        values[label].textContent = String(n).padStart(2, "0");
+      }
+    };
+    tick();
+    timer = setInterval(tick, 1000);
+  }
+
+  // Race to first overall pick
+  const draft = data.draftOrder || [];
+  const draftSection = document.querySelector(".draft");
+  if (draft.length === 0) {
+    draftSection.hidden = true;
+  } else {
+    const row = (t) => {
+      const tr = document.createElement("tr");
+      if (t.pick === 1) tr.classList.add("first");
+      if (t.abbrev === data.teamAbbrev) tr.classList.add("us");
+      const cells = [
+        ["pick", String(t.pick)],
+        ["team", null],
+        ["", String(t.gp)],
+        ["", `${t.w}-${t.l}-${t.otl}`],
+        ["pts", String(t.pts)],
+        ["", t.pct.toFixed(3).replace(/^0(?=\.)/, "")],
+      ];
+      for (const [cls, text] of cells) {
+        const td = document.createElement("td");
+        if (cls) td.className = cls;
+        if (cls === "team") {
+          const ab = document.createElement("span");
+          ab.className = "abbr";
+          ab.textContent = t.abbrev;
+          td.append(ab, t.name);
+        } else {
+          td.textContent = text;
+        }
+        tr.appendChild(td);
+      }
+      return tr;
+    };
+    const lottery = draft.filter((t) => !t.playoff);
+    const playoff = draft.filter((t) => t.playoff);
+    lottery.forEach((t) => document.getElementById("draft-lottery").appendChild(row(t)));
+    playoff.forEach((t) => document.getElementById("draft-playoff").appendChild(row(t)));
+    if (playoff.length) {
+      document.getElementById("playoff-summary").textContent =
+        `Picks ${playoff[0].pick}-${playoff[playoff.length - 1].pick}: teams in playoff position`;
+    } else {
+      document.querySelector(".playoff-group").hidden = true;
+    }
+
+    const leader = draft[0];
+    const us = draft.find((t) => t.abbrev === data.teamAbbrev);
+    const intro = document.getElementById("draft-intro");
+    if (us && us.pick === 1) {
+      const next = draft[1];
+      const gap = next.pts - us.pts;
+      intro.textContent = gap === 0
+        ? `The ${data.team} lead the race, tied on points with ${next.name} in second.`
+        : `The ${data.team} lead the race with ${us.pts} points, ${gap} ${gap === 1 ? "point" : "points"} clear of ${next.name} in second.`;
+    } else if (us) {
+      intro.textContent =
+        `${leader.name} lead the race with ${leader.pts} points. The ${data.team} would pick #${us.pick}, ${us.pts - leader.pts} ${us.pts - leader.pts === 1 ? "point" : "points"} off the pace.`;
+    } else {
+      intro.textContent = `${leader.name} lead the race with ${leader.pts} points.`;
+    }
+  }
+
+  // As-of line
+  const asOf = new Date(data.asOf).toLocaleString("en-US", {
+    timeZone: "America/New_York", month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
+  });
+  document.getElementById("asof").textContent = `Numbers as of ${asOf} ET.`;
+})();
+</script>
